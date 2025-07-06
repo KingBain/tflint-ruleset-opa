@@ -19,6 +19,7 @@ import (
 func Functions(runner tflint.Runner) []func(*rego.Rego) {
 	return []func(*rego.Rego){
 		resourcesFunc(runner).asOption(),
+		metaArgumentsFunc(runner).asOption(), 
 		dataSourcesFunc(runner).asOption(),
 		moduleCallsFunc(runner).asOption(),
 		providersFunc(runner).asOption(),
@@ -40,6 +41,7 @@ func Functions(runner tflint.Runner) []func(*rego.Rego) {
 func TesterFunctions(runner tflint.Runner) []*tester.Builtin {
 	return []*tester.Builtin{
 		resourcesFunc(runner).asTester(),
+		metaArgumentsFunc(runner).asTester(),
 		dataSourcesFunc(runner).asTester(),
 		moduleCallsFunc(runner).asTester(),
 		providersFunc(runner).asTester(),
@@ -63,6 +65,7 @@ func TesterFunctions(runner tflint.Runner) []*tester.Builtin {
 func MockFunctions() []func(*rego.Rego) {
 	return []func(*rego.Rego){
 		mockFunction3(resourcesFunc).asOption(),
+		mockFunction3(metaArgumentsFunc).asOption(),
 		mockFunction3(dataSourcesFunc).asOption(),
 		mockFunction2(moduleCallsFunc).asOption(),
 		mockFunction2(providersFunc).asOption(),
