@@ -139,6 +139,65 @@ func resourcesFunc(runner tflint.Runner) *function3 {
 	}
 }
 
+func metaArgumentsFunc(runner tflint.Runner) *function3 {
+	return &function3{
+		function: function{
+			Decl: &rego.Function{
+				Name: "terraform.resources_meta_arguments",
+				Decl: types.NewFunction(
+					types.Args(types.S, schemaTy, optionsTy),
+					types.NewArray(nil, typedBlockTy),
+				),
+				Memoize:          true,
+				Nondeterministic: true,
+			},
+		},
+		Func: func(_ rego.BuiltinContext, resourceTypeTerm, schemaTerm, _ *ast.Term) (*ast.Term, error) {
+			var resourceType string
+			if err := ast.As(resourceTypeTerm.Value, &resourceType); err != nil {
+				return nil, err
+			}
+			var schemaJSON map[string]any
+			if err := ast.As(schemaTerm.Value, &schemaJSON); err != nil {
+				return nil, err
+			}
+			innerSchema, tyMap, err := jsonToSchema(schemaJSON, map[string]cty.Type{}, "schema")
+			if err != nil {
+				return nil, err
+			}
+			content, err := runner.GetModuleContent(&hclext.BodySchema{
+				Blocks: []hclext.BlockSchema{
+					{
+						Type:       "resource",
+						LabelNames: []string{"type", "name"},
+						Body:       innerSchema,
+					},
+				},
+			}, &tflint.GetModuleContentOption{ExpandMode: tflint.ExpandModeNone})
+			if err != nil {
+				return nil, err
+			}
+			var blocks []*hclext.Block
+			for _, block := range content.Blocks {
+				if resourceType == "*" || block.Labels[0] == resourceType {
+					blocks = append(blocks, block)
+				}
+			}
+			// 5. JSON-ify them
+			out, err := typedBlocksToJSON(blocks, tyMap, "schema", runner)
+			if err != nil {
+				return nil, err
+			}
+			v, err := ast.InterfaceToValue(out)
+			if err != nil {
+				return nil, err
+			}
+			return ast.NewTerm(v), nil
+		},
+	}
+}
+
+
 // terraform.data_sources: data_sources := terraform.data_sources(data_type, schema, options)
 //
 // Returns Terraform data sources.
